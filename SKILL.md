@@ -45,11 +45,60 @@ skills/gmail/scripts/gmail.sh \
 
 ## Key endpoints
 
-<!-- TODO: document key API endpoints for Gmail -->
-
 | Action | Method | Endpoint |
 |--------|--------|----------|
-| Example | GET | `/example` |
+| List messages (IDs only) | GET | `/v1/users/me/messages` |
+| Search messages (IDs only) | GET | `/v1/users/me/messages?q=<query>` |
+| Get message with metadata | GET | `/v1/users/me/messages/<id>?format=metadata&metadataHeaders=Subject&metadataHeaders=From&metadataHeaders=Date` |
+| Get message full body | GET | `/v1/users/me/messages/<id>?format=full` |
+| Get thread | GET | `/v1/users/me/threads/<id>` |
+| List threads | GET | `/v1/users/me/threads` |
+| Send message | POST | `/v1/users/me/messages/send` |
+| Create draft | POST | `/v1/users/me/drafts` |
+| Trash message | POST | `/v1/users/me/messages/<id>/trash` |
+| Modify labels | POST | `/v1/users/me/messages/<id>/modify` |
+| List labels | GET | `/v1/users/me/labels` |
+| Get profile | GET | `/v1/users/me/profile` |
+
+## Default behaviour
+
+**The list endpoint returns IDs only.** Always follow up with a metadata fetch for each ID to get Subject, From, and Date. Unless the user explicitly asks for the full body, use `?format=metadata` — it's much faster than `?format=full`.
+
+```bash
+# Step 1 — list (returns IDs)
+skills/gmail/scripts/gmail.sh \
+  --endpoint "/v1/users/me/messages?maxResults=10&q=is:inbox" \
+  --intent "list inbox emails"
+
+# Step 2 — fetch metadata for each ID
+skills/gmail/scripts/gmail.sh \
+  --endpoint "/v1/users/me/messages/<id>?format=metadata&metadataHeaders=Subject&metadataHeaders=From&metadataHeaders=Date" \
+  --intent "fetch email subject and sender"
+```
+
+## Typical workflows
+
+**Search and read emails:**
+```bash
+# Search by query
+skills/gmail/scripts/gmail.sh --endpoint "/v1/users/me/messages?q=is:unread" --intent "find unread emails"
+# Full body (only when user needs the content)
+skills/gmail/scripts/gmail.sh --endpoint "/v1/users/me/messages/<id>?format=full" --intent "read email body"
+```
+
+**Send an email:**
+```bash
+# Payload must be a base64url-encoded RFC 2822 message
+skills/gmail/scripts/gmail.sh --method POST --endpoint /v1/users/me/messages/send \
+  --intent "send email to user" \
+  --payload '{"raw":"<base64url-encoded message>"}'
+```
+
+**Move to trash:**
+```bash
+skills/gmail/scripts/gmail.sh --method POST --endpoint /v1/users/me/messages/<id>/trash \
+  --intent "trash spam email"
+```
 
 ## Token & scope
 

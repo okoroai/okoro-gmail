@@ -28,7 +28,13 @@ Rather than giving your agent raw Gmail credentials, you configure a **service t
 
 ## What your agent can do
 
-<!-- TODO: list operations for this provider -->
+- **Read** messages and threads, including full body content
+- **Search** using Gmail query syntax (`from:`, `subject:`, `is:unread`, date ranges, etc.)
+- **Send** emails (plain text or HTML, with attachments)
+- **Draft** messages and manage drafts
+- **Trash** and manage message lifecycle
+- **Label** messages — apply, remove, or create labels
+- **Fetch profile** — address, total messages, history ID
 
 ## License
 
