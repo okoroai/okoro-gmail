@@ -39,26 +39,26 @@ skills/gmail/scripts/gmail.sh \
 
 - **endpoint** — Gmail API path
 - **intent** — why Claude is making this call (5–10 words, reflects the user's goal)
-- **method** — defaults to `GET`; set `POST`/`PUT`/`DELETE` for mutations
+- **method** — defaults to `GET`; set `POST`/`PATCH`/`PUT`/`DELETE` for mutations
 - **scope** — inferred from method if omitted
-- **payload** — JSON body for POST/PUT requests
+- **payload** — JSON body for POST/PATCH/PUT requests
 
 ## Key endpoints
 
-| Action | Method | Endpoint |
-|--------|--------|----------|
-| List messages (IDs only) | GET | `/v1/users/me/messages` |
-| Search messages (IDs only) | GET | `/v1/users/me/messages?q=<query>` |
-| Get message with metadata | GET | `/v1/users/me/messages/<id>?format=metadata&metadataHeaders=Subject&metadataHeaders=From&metadataHeaders=Date` |
-| Get message full body | GET | `/v1/users/me/messages/<id>?format=full` |
-| Get thread | GET | `/v1/users/me/threads/<id>` |
-| List threads | GET | `/v1/users/me/threads` |
-| Send message | POST | `/v1/users/me/messages/send` |
-| Create draft | POST | `/v1/users/me/drafts` |
-| Trash message | POST | `/v1/users/me/messages/<id>/trash` |
-| Modify labels | POST | `/v1/users/me/messages/<id>/modify` |
-| List labels | GET | `/v1/users/me/labels` |
-| Get profile | GET | `/v1/users/me/profile` |
+| Action | Method | Endpoint | Min scope |
+|--------|--------|----------|-----------|
+| List messages (IDs only) | GET | `/v1/users/me/messages` | `read` |
+| Search messages (IDs only) | GET | `/v1/users/me/messages?q=<query>` | `read` |
+| Get message with metadata | GET | `/v1/users/me/messages/<id>?format=metadata&metadataHeaders=Subject&metadataHeaders=From&metadataHeaders=Date` | `read` |
+| Get message full body | GET | `/v1/users/me/messages/<id>?format=full` | `read` |
+| Get thread | GET | `/v1/users/me/threads/<id>` | `read` |
+| List threads | GET | `/v1/users/me/threads` | `read` |
+| List labels | GET | `/v1/users/me/labels` | `read` |
+| Get profile | GET | `/v1/users/me/profile` | `read` |
+| Send message | POST | `/v1/users/me/messages/send` | `write` |
+| Create draft | POST | `/v1/users/me/drafts` | `write` |
+| Modify labels | POST | `/v1/users/me/messages/<id>/modify` | `update` |
+| Trash message | POST | `/v1/users/me/messages/<id>/trash` | `delete` |
 
 ## Default behaviour
 
@@ -103,7 +103,7 @@ skills/gmail/scripts/gmail.sh --method POST --endpoint /v1/users/me/messages/<id
 ## Token & scope
 
 `OKORO_SERVICE_TOKEN` must have at least the required scope level:
-`read` < `write` < `update` < `delete`
+`read` < `write` < `update` < `delete` < `all`
 
 ## Intent
 
