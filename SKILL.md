@@ -37,18 +37,18 @@ skills/gmail/scripts/gmail.sh \
   [--payload <json>]
 ```
 
-- **endpoint** — Gmail API path
+- **endpoint** — Gmail API path, including query parameters (e.g. `"/v1/users/me/messages?maxResults=10&q=is:unread"`)
 - **intent** — why Claude is making this call (5–10 words, reflects the user's goal)
 - **method** — defaults to `GET`; set `POST`/`PATCH`/`PUT`/`DELETE` for mutations
 - **scope** — inferred from method if omitted
-- **payload** — JSON body for POST/PATCH/PUT requests
+- **payload** — JSON body for POST/PATCH/PUT requests only. **Never use `--payload` with GET or HEAD** — pass filters and options as query parameters in `--endpoint` instead.
 
 ## Key endpoints
 
 | Action | Method | Endpoint | Min scope |
 |--------|--------|----------|-----------|
-| List messages (IDs only) | GET | `/v1/users/me/messages` | `read` |
-| Search messages (IDs only) | GET | `/v1/users/me/messages?q=<query>` | `read` |
+| List messages (IDs only) | GET | `/v1/users/me/messages?maxResults=10` | `read` |
+| Search messages (IDs only) | GET | `/v1/users/me/messages?q=<query>&maxResults=10` | `read` |
 | Get message with metadata | GET | `/v1/users/me/messages/<id>?format=metadata&metadataHeaders=Subject&metadataHeaders=From&metadataHeaders=Date` | `read` |
 | Get message full body | GET | `/v1/users/me/messages/<id>?format=full` | `read` |
 | Get thread | GET | `/v1/users/me/threads/<id>` | `read` |
