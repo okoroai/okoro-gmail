@@ -32,16 +32,16 @@ Gmail operations. The script caches the session token and refreshes it automatic
 skills/gmail/scripts/gmail.sh \
   --endpoint <path> \
   --intent   <reason> \
-  [--method  GET|POST|PUT|DELETE] \
-  [--scope   read|write|update|delete] \
+  [--method  GET|POST|DELETE] \
+  [--scope   read|write|update|delete|all] \
   [--payload <json>]
 ```
 
 - **endpoint** — Gmail API path, including query parameters (e.g. `"/v1/users/me/messages?maxResults=10&q=is:unread"`)
-- **intent** — why Claude is making this call (5–10 words, reflects the user's goal)
-- **method** — defaults to `GET`; set `POST`/`PATCH`/`PUT`/`DELETE` for mutations
-- **scope** — inferred from method if omitted
-- **payload** — JSON body for POST/PATCH/PUT requests only. **Never use `--payload` with GET or HEAD** — pass filters and options as query parameters in `--endpoint` instead.
+- **intent** — the session intent: the user's overall goal for this conversation (not a description of the API call)
+- **method** — defaults to `GET`; set `POST`/`DELETE` for mutations
+- **scope** — inferred from method if omitted (`GET`→read, `POST`→write, `DELETE`→delete). **Always pass `--scope` explicitly for POST endpoints that require `update`, `delete`, or `all`** — auto-inference only gives `write`.
+- **payload** — JSON body for POST requests only. **Never use `--payload` with GET or HEAD** — pass filters and options as query parameters in `--endpoint` instead.
 
 ## Key endpoints
 
@@ -57,8 +57,11 @@ skills/gmail/scripts/gmail.sh \
 | Get profile | GET | `/v1/users/me/profile` | `read` |
 | Send message | POST | `/v1/users/me/messages/send` | `write` |
 | Create draft | POST | `/v1/users/me/drafts` | `write` |
-| Modify labels | POST | `/v1/users/me/messages/<id>/modify` | `update` |
-| Trash message | POST | `/v1/users/me/messages/<id>/trash` | `delete` |
+| Modify labels | POST | `/v1/users/me/messages/<id>/modify` | `update` ⚠ pass `--scope update` |
+| Trash message | POST | `/v1/users/me/messages/<id>/trash` | `delete` ⚠ pass `--scope delete` |
+| Delete message (permanent) | DELETE | `/v1/users/me/messages/<id>` | `delete` |
+
+> ⚠ POST auto-infers `write` scope. For `modify` and `trash` you **must** pass `--scope` explicitly or the proxy will reject the request with 403.
 
 ## Default behaviour
 
@@ -73,7 +76,7 @@ skills/gmail/scripts/gmail.sh \
 # Step 2 — fetch metadata for each ID
 skills/gmail/scripts/gmail.sh \
   --endpoint "/v1/users/me/messages/<id>?format=metadata&metadataHeaders=Subject&metadataHeaders=From&metadataHeaders=Date" \
-  --intent "fetch email subject and sender"
+  --intent "list inbox emails"
 ```
 
 ## Typical workflows
@@ -83,20 +86,41 @@ skills/gmail/scripts/gmail.sh \
 # Search by query
 skills/gmail/scripts/gmail.sh --endpoint "/v1/users/me/messages?q=is:unread" --intent "find unread emails"
 # Full body (only when user needs the content)
-skills/gmail/scripts/gmail.sh --endpoint "/v1/users/me/messages/<id>?format=full" --intent "read email body"
+skills/gmail/scripts/gmail.sh --endpoint "/v1/users/me/messages/<id>?format=full" --intent "find unread emails"
 ```
 
 **Send an email:**
 ```bash
-# Payload must be a base64url-encoded RFC 2822 message
+# Build an RFC 2822 message, base64url-encode it, then send.
+# The raw string must include To, From, Subject headers followed by a blank line and the body.
+# Example (bash): raw=$(printf 'To: user@example.com\r\nFrom: me@example.com\r\nSubject: Hello\r\n\r\nBody text' | base64 | tr '+/' '-_' | tr -d '=\n')
 skills/gmail/scripts/gmail.sh --method POST --endpoint /v1/users/me/messages/send \
-  --intent "send email to user" \
-  --payload '{"raw":"<base64url-encoded message>"}'
+  --intent "send reply to user" \
+  --payload "{\"raw\":\"$raw\"}"
+```
+
+**Create a draft:**
+```bash
+# Same base64url encoding as send; body is wrapped in {"message": {...}}
+skills/gmail/scripts/gmail.sh --method POST --endpoint /v1/users/me/drafts \
+  --intent "draft reply for review" \
+  --payload "{\"message\":{\"raw\":\"$raw\"}}"
+```
+
+**Modify labels (mark as read, star, etc.):**
+```bash
+# Must pass --scope update — POST alone would only get write scope
+skills/gmail/scripts/gmail.sh --method POST --scope update \
+  --endpoint /v1/users/me/messages/<id>/modify \
+  --intent "mark email as read" \
+  --payload '{"removeLabelIds":["UNREAD"]}'
 ```
 
 **Move to trash:**
 ```bash
-skills/gmail/scripts/gmail.sh --method POST --endpoint /v1/users/me/messages/<id>/trash \
+# Must pass --scope delete — POST alone would only get write scope
+skills/gmail/scripts/gmail.sh --method POST --scope delete \
+  --endpoint /v1/users/me/messages/<id>/trash \
   --intent "trash spam email"
 ```
 
@@ -105,6 +129,14 @@ skills/gmail/scripts/gmail.sh --method POST --endpoint /v1/users/me/messages/<id
 `OKORO_SERVICE_TOKEN` must have at least the required scope level:
 `read` < `write` < `update` < `delete` < `all`
 
+**Scope auto-inference:** `GET`→`read`, `POST`→`write`, `DELETE`→`delete`. POST-based endpoints that require `update` or `delete` scope (modify, trash) will not work with the inferred `write` scope — always pass `--scope` explicitly for those.
+
 ## Intent
 
-Always pass `--intent` with the user's actual reason — not a description of the API call.
+`--intent` is the **session intent** — the user's overall goal for this conversation, not a description of the individual API call. It is logged by the proxy as the audit reason for every token issued in this session. Pass the same value for every call you make within a single user request.
+
+```
+--intent "summarise unread emails from this morning"   ✓  (why the user asked)
+--intent "fetch email metadata"                         ✗  (describes the API call)
+--intent "list messages"                                ✗  (too vague, still call-level)
+```
