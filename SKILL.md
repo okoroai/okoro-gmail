@@ -4,7 +4,7 @@ description: "Read, search, send, and manage Gmail messages and threads."
 version: 1.0.0
 
 # Claude Code fields
-argument-hint: "--endpoint /<resource> --intent \"describe action\""
+argument-hint: "--endpoint /<resource> --intent \"user's goal, not the API call\""
 allowed-tools: Bash
 
 # OpenClaw fields
@@ -71,12 +71,12 @@ skills/gmail/scripts/gmail.sh \
 # Step 1 — list (returns IDs)
 skills/gmail/scripts/gmail.sh \
   --endpoint "/v1/users/me/messages?maxResults=10&q=is:inbox" \
-  --intent "list inbox emails"
+  --intent "summarise my inbox"
 
-# Step 2 — fetch metadata for each ID
+# Step 2 — fetch metadata for each ID (same intent — same user request)
 skills/gmail/scripts/gmail.sh \
   --endpoint "/v1/users/me/messages/<id>?format=metadata&metadataHeaders=Subject&metadataHeaders=From&metadataHeaders=Date" \
-  --intent "list inbox emails"
+  --intent "summarise my inbox"
 ```
 
 ## Typical workflows
@@ -84,9 +84,9 @@ skills/gmail/scripts/gmail.sh \
 **Search and read emails:**
 ```bash
 # Search by query
-skills/gmail/scripts/gmail.sh --endpoint "/v1/users/me/messages?q=is:unread" --intent "find unread emails"
+skills/gmail/scripts/gmail.sh --endpoint "/v1/users/me/messages?q=is:unread" --intent "show me my unread emails"
 # Full body (only when user needs the content)
-skills/gmail/scripts/gmail.sh --endpoint "/v1/users/me/messages/<id>?format=full" --intent "find unread emails"
+skills/gmail/scripts/gmail.sh --endpoint "/v1/users/me/messages/<id>?format=full" --intent "show me my unread emails"
 ```
 
 **Send an email:**
@@ -95,7 +95,7 @@ skills/gmail/scripts/gmail.sh --endpoint "/v1/users/me/messages/<id>?format=full
 # The raw string must include To, From, Subject headers followed by a blank line and the body.
 # Example (bash): raw=$(printf 'To: user@example.com\r\nFrom: me@example.com\r\nSubject: Hello\r\n\r\nBody text' | base64 | tr '+/' '-_' | tr -d '=\n')
 skills/gmail/scripts/gmail.sh --method POST --endpoint /v1/users/me/messages/send \
-  --intent "send reply to user" \
+  --intent "reply to Alice's email about the project deadline" \
   --payload "{\"raw\":\"$raw\"}"
 ```
 
@@ -103,7 +103,7 @@ skills/gmail/scripts/gmail.sh --method POST --endpoint /v1/users/me/messages/sen
 ```bash
 # Same base64url encoding as send; body is wrapped in {"message": {...}}
 skills/gmail/scripts/gmail.sh --method POST --endpoint /v1/users/me/drafts \
-  --intent "draft reply for review" \
+  --intent "draft a response to the board update thread" \
   --payload "{\"message\":{\"raw\":\"$raw\"}}"
 ```
 
@@ -112,7 +112,7 @@ skills/gmail/scripts/gmail.sh --method POST --endpoint /v1/users/me/drafts \
 # Must pass --scope update — POST alone would only get write scope
 skills/gmail/scripts/gmail.sh --method POST --scope update \
   --endpoint /v1/users/me/messages/<id>/modify \
-  --intent "mark email as read" \
+  --intent "mark the newsletters as read" \
   --payload '{"removeLabelIds":["UNREAD"]}'
 ```
 
@@ -121,7 +121,7 @@ skills/gmail/scripts/gmail.sh --method POST --scope update \
 # Must pass --scope delete — POST alone would only get write scope
 skills/gmail/scripts/gmail.sh --method POST --scope delete \
   --endpoint /v1/users/me/messages/<id>/trash \
-  --intent "trash spam email"
+  --intent "clean up the promotional emails from last week"
 ```
 
 ## Token & scope
