@@ -31,7 +31,7 @@ Gmail operations. The script caches the session token and refreshes it automatic
 ```bash
 skills/gmail/scripts/gmail.sh \
   --endpoint <path> \
-  --intent   <reason> \
+  --intent   <text> \
   [--method  GET|POST|DELETE] \
   [--scope   read|write|update|delete|all] \
   [--payload <json>]
